@@ -1,0 +1,205 @@
+﻿@page
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<style>
+    table.dataTable tbody td {
+        vertical-align: top;
+        word-break: break-word;
+    }
+</style>
+
+<div>
+    <label>Source:</label>
+    <select id="year"></select>
+    <select id="month">
+        <option value=""></option>
+        <option value="1">Jan</option>
+        <option value="2">Feb</option>
+        <option value="3">Mar</option>
+        <option value="4">Apr</option>
+        <option value="5">May</option>
+        <option value="6">Jun</option>
+        <option value="7">Jul</option>
+        <option value="8">Aug</option>
+        <option value="9">Sep</option>
+        <option value="10">Oct</option>
+        <option value="11">Nov</option>
+        <option value="12">Dec</option>
+    </select>
+    <select id="day">
+        <option></option>
+    </select>
+
+    <label>Limit:</label>
+    <select id="limit">
+        <option>100</option>
+        <option>250</option>
+        <option>500</option>
+    </select>
+</div>
+
+<div id="queryBuilder"></div>
+<button id="builderState">Filter</button>
+
+<hr />
+
+<table id="resultTable" class="display">
+    <thead>
+        <tr>
+            <th>Log File</th>
+            <th>Log Row</th>
+            <th data-filter-field="datepicker">Date</th>
+            <th>Time</th>
+            <th data-visible="false">Server IP</th>
+            <th data-filter-field="dropdownlist">Method</th>
+            <th data-filter-field="textbox">Url</th>
+            <th>Query</th>
+            <th data-visible="false">Port</th>
+            <th data-visible="false">Username</th>
+            <th data-filter-field="textbox">Client IP</th>
+            <th data-filter-field="textbox">User Agent</th>
+            <th>Referer</th>
+            <th data-filter-field="textbox">Status</th>
+            <th data-visible="false">Sub Status</th>
+            <th data-visible="false">Win32 Status</th>
+            <th data-visible="false">Time Taken</th>
+        </tr>
+    </thead>
+</table>
+
+@section scripts{
+    <script type="text/javascript">
+        var fields = [];
+
+        var fieldValues = {
+            "cs-method": [
+                { text: 'CONNECT' }, { text: 'DELETE' }, { text: 'GET' },
+                { text: 'HEAD' }, { text: 'OPTIONS' }, { text: 'PATCH' },
+                { text: 'POST' }, { text: 'PUT' }, { text: 'TRACE' }
+            ]
+        };
+
+        var columns = [
+            {
+                data: 'LogFilename', render: function (data, type, row, meta) {
+                    return data.substring(data.lastIndexOf('\\') + 1);
+                }
+            },
+            { data: 'LogRow' },
+            { data: 'date' },
+            { data: 'time' },
+            { data: 's-ip' },
+            { data: 'cs-method' },
+            { data: 'cs-uri-stem' },
+            { data: 'cs-uri-query', defaultContent: '' },
+            { data: 's-port' },
+            { data: 'cs-username', defaultContent: '' },
+            { data: 'c-ip' },
+            { data: 'cs(User-Agent)', defaultContent: '' },
+            { data: 'cs(Referer)', defaultContent: '' },
+            { data: 'sc-status' },
+            { data: 'sc-substatus' },
+            { data: 'sc-win32-status' },
+            { data: 'time-taken' }
+        ];
+
+        $.datepicker.setDefaults({ dateFormat: 'yy-mm-dd' });
+
+        $(function () {
+            for (var i = 0; i < 3; i++)
+                $('#year').append(new Option(new Date().getFullYear() - i))
+
+            $('#month').val(new Date().getMonth() + 1);
+
+            for (var i = 1; i <= 31; i++)
+                $('#day').append(new Option(i))
+            $('#day').val(new Date().getDate());
+
+            $('#resultTable thead tr th').each(function (i) {
+                switch ($(this).data('filterField')) {
+                    case 'textbox':
+                        fields.push({
+                            name: columns[i].data,
+                            caption: $(this).text(),
+                            renderer: { name: 'textbox' },
+                            conditions: [
+                                { text: 'Is', value: '=' },
+                                { text: 'Not', value: '<>' },
+                                { text: 'Includes', value: 'LIKE' },
+                                { text: 'Excludes', value: 'NOT LIKE' }
+                            ]
+                        });
+                        break;
+                    case 'datepicker':
+                        fields.push({
+                            name: columns[i].data,
+                            caption: $(this).text(),
+                            renderer: { name: 'datepicker' },
+                            conditions: [
+                                { text: 'Is', value: '=' },
+                                { text: 'After', value: '>' },
+                                { text: 'Before', value: '<' }
+                            ]
+                        });
+                        break;
+                    case 'dropdownlist':
+                        fields.push({
+                            name: columns[i].data,
+                            caption: $(this).text(),
+                            renderer: {
+                                name: 'dropdownlist',
+                                values: fieldValues[columns[i].data]
+                            },
+                            conditions: [
+                                { text: 'Is', value: '=' },
+                                { text: 'Not', value: '<>' }
+                            ]
+                        });
+                        break;
+                }
+            });
+
+            $('#queryBuilder').nrecoConditionBuilder({
+                fields: fields,
+                showRowIndex: false,
+                showExpressionSelector: false,
+                notSelectedFieldText: ''
+            });
+
+            $('#resultTable').DataTable({
+                ajax: {
+                    url: '/api/log',
+                    dataSrc: '',
+                    data: function (d) {
+                        d.limit = $('#limit').val();
+                        d.year = $('#year').val();
+                        d.month = $('#month').val();
+                        d.day = $('#day').val();
+                        d.filters = $('#queryBuilder').nrecoConditionBuilder('getConditions');
+                        d.order = $('#resultTable').DataTable().order().map(function (item) { return columns[item[0]].data + ' ' + item[1].toUpperCase(); });
+                    },
+                    error: function (jqXHR) {
+                        $('#resultTable').DataTable().clear().draw();
+                        if (jqXHR.status === 400)
+                            $('.dataTables_empty').text(jqXHR.responseText);
+                        else if (jqXHR.status === 501)
+                            $('.dataTables_empty').text('Not Supported');
+                    }
+                },
+                columns: columns,
+                language: {
+                    lengthMenu: 'Show _MENU_ from  <span id="totalRows"></span> entries'
+                },
+                drawCallback: function (settings) {
+                    $('#totalRows').text(settings.fnRecordsTotal());
+                }
+            });
+        });
+
+        $('#builderState').click(function () {
+            $('#resultTable').DataTable().ajax.reload();
+        });
+    </script>
+}
