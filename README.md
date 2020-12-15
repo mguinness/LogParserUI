@@ -4,7 +4,7 @@ Web interface for Microsoft Log Parser.
 ## Introduction
 [Log Parser](https://en.wikipedia.org/wiki/Logparser) is a widely used tool from Microsoft that enables parsing of log files from a variety of sources, including IIS web server.  This application provides a front end for the parser allowing you to view log entries based on user defined filters.
 
-![Screenshot](Screenshot.PNG)
+![Screenshot](Screenshot.png)
 
 ## Setup
 Install [Log Parser](https://www.microsoft.com/en-us/download/details.aspx?id=24659) using the provided installer.  In order for the web app to use the COM API it must first be registered using `regsvr32 LogParser.dll` and also have the correct NTFS permissions set.  Also ensure that the folder containing the log files, i.e. `C:\inetpub\logs\LogFiles\W3SVC1` has suitable permissions set.
