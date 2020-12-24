@@ -17,6 +17,9 @@ Finally change the appsettings.json file to include the path where the log files
 "LogPath": "C:\\inetpub\\logs\\LogFiles\\W3SVC1"
 ```
 
+## IP Blocker Script 
+PowerShell script in [gist](https://gist.github.com/mguinness/e8e1cbf99d2596f37d7c7b9909ca88f0) allows you to define custom rules (using Log Parser) to auto block IP addresses in IIS and also report to AbuseIPDB website (registration required).
+
 ## Credits
 
 NReco Query Builder (jQuery plugin)
